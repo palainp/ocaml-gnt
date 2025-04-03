@@ -18,20 +18,20 @@ open Gnt
 
 let main shr_h dev_h =
   let share = Gntshr.share_pages_exn shr_h 0 1 true in
-  let io_page_shr_side = Gntshr.(share.mapping) |> Io_page.to_cstruct in
+  let io_page_shr_side = Gntshr.(share.mapping) in
   List.iter (fun r -> Printf.printf "Shared a page with gntref = %d\n%!" r) Gntshr.(share.refs);
   Printf.printf "Shared page(s) OK. Now trying to map.\n%!";
   let local_mapping = Gnttab.map_exn dev_h Gnttab.({domid=0; ref=List.hd Gntshr.(share.refs)}) true in
-  let io_page_map_side = Gnttab.Local_mapping.(to_buf local_mapping) |> Io_page.to_cstruct in
+  let io_page_map_side = Gnttab.Local_mapping.(to_buf local_mapping) in
   Printf.printf "Mapping OK. Now writing randow stuff in one side and check we have the same thing on the other side.\n%!";
   let random_string = Bytes.create 4096 in
   let zero_string = Bytes.make 4096 '\000' in
   let zero_string2 = Bytes.make 4096 '\000' in
-  Cstruct.blit_from_bytes random_string 0 io_page_shr_side 0 4096;
-  Cstruct.blit_to_bytes io_page_shr_side 0 zero_string 0 4096;
+  Io_page.string_blit (Bytes.unsafe_to_string random_string) 0 io_page_shr_side 0 4096;
+  Io_page.blit_to_bytes io_page_shr_side 0 zero_string 0 4096;
   assert (Bytes.equal zero_string random_string);
   Printf.printf "I blitted random 4096 chars on the page, and read back the same, all OK!\n%!";
-  Cstruct.blit_to_bytes io_page_map_side 0 zero_string2 0 4096;
+  Io_page.blit_to_bytes io_page_map_side 0 zero_string2 0 4096;
   assert (Bytes.equal zero_string2 random_string);
   Printf.printf "I read the same as well from the map side...\n%!";
   Printf.printf "Now unmapping and unsharing everything.\n%!";
@@ -39,19 +39,19 @@ let main shr_h dev_h =
   Gntshr.munmap_exn shr_h share;
   Printf.printf "Now trying to share and map 10 pages as a vector.\n%!";
   let share = Gntshr.share_pages_exn shr_h 0 10 true in
-  let io_page_shr_side = Gntshr.(share.mapping) |> Io_page.to_cstruct in
+  let io_page_shr_side = Gntshr.(share.mapping) in
   let refs = Gntshr.(share.refs) in
   let grants = List.map (fun ref -> Gnttab.({domid=0; ref})) refs in
   let local_mapping = Gnttab.mapv_exn dev_h grants true in
-  let io_page_map_side = Gnttab.Local_mapping.(to_buf local_mapping) |> Io_page.to_cstruct in
+  let io_page_map_side = Gnttab.Local_mapping.(to_buf local_mapping) in
   let random_string = Bytes.create (4096*10) in
   let zero_string = Bytes.make (4096*10) '\000' in
   let zero_string2 = Bytes.make (4096*10) '\000' in
-  Cstruct.blit_from_bytes random_string 0 io_page_shr_side 0 (4096*10);
-  Cstruct.blit_to_bytes io_page_shr_side 0 zero_string 0 (4096*10);
+  Io_page.string_blit (Bytes.unsafe_to_string random_string) 0 io_page_shr_side 0 (4096*10);
+  Io_page.blit_to_bytes io_page_shr_side 0 zero_string 0 (4096*10);
   assert (Bytes.equal zero_string random_string);
   Printf.printf "I blitted random 4096*10 chars on the page, and read back the same, all OK!\n%!";
-  Cstruct.blit_to_bytes io_page_map_side 0 zero_string2 0 (4096*10);
+  Io_page.blit_to_bytes io_page_map_side 0 zero_string2 0 (4096*10);
   assert (Bytes.equal zero_string2 random_string);
   Printf.printf "I read the same as well from the map side...\n%!";
   Printf.printf "Success! Now unmapping and unsharing everything!\n%!";
