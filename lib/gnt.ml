@@ -76,7 +76,7 @@ module Gnttab = struct
       let h, page = map_fresh_exn interface grant.ref grant.domid writable in
       Local_mapping.make [h] page
     | false ->
-      let page = Io_page.get 1 in
+      let page = Io_page.get ~n:1 () in
       let h = map_onto_exn interface grant.ref page grant.domid writable in
       Local_mapping.make [h] page
 
@@ -98,7 +98,7 @@ module Gnttab = struct
       Local_mapping.make [h] page
     | false ->
       let nb_grants = List.length grants in
-      let block = Io_page.get nb_grants in
+      let block = Io_page.get ~n:nb_grants () in
       let pages = Io_page.to_pages block in
       let hs =
         List.fold_left2 (fun acc g p ->
@@ -261,7 +261,7 @@ module Gntshr = struct
 
   let share_pages_individually_exn _ domid count writable =
     (* First allocate a list of n pages. *)
-    let block = Io_page.get count in
+    let block = Io_page.get ~n:count () in
     let pages = Io_page.to_pages block in
     let gntrefs = get_n_nonblock count in
     if gntrefs = []
